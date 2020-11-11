@@ -1,0 +1,6 @@
+.cache/
+.config/
+.vscode/
+composer.lock
+src/getjoomla.cache
+src/joomla.zip
