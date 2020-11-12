@@ -81,7 +81,6 @@ class Installer
 
         if (file_exists($path) && (filemtime($path) > (time() - (60 * 15)))) {
             $this->cache = json_decode((string) file_get_contents($path), true);
-            //$this->cache = $this->objectToArray($buffer);
         }
     }
 
@@ -377,6 +376,24 @@ class Installer
             );
         }
 
+        if ('' === \trim($content)) {
+            $curlError = '';
+
+            $debugPath = __DIR__ . '/getjoomla_curl.log';
+            if (file_exists($debugPath)) {
+                $curlError = file_get_contents($debugPath);
+            }
+
+            throw new \RuntimeException(
+                sprintf(
+                    'The URL %s has returned an empty string. The function '.
+                    'used to retrieve that content was %s. %s',
+                    $url,
+                    function_exists('curl_init') ? 'curl' : 'file_get_contents',
+                    ('' !== $curlError) ? 'Returned error was: '. $curlError : ''
+                )
+            );
+        }
         return $content;
     }
 
@@ -406,6 +423,13 @@ class Installer
             curl_setopt($this->connection, CURLOPT_URL, $url);
         }
 
+        // output debugging info in a txt file
+        $debugPath = __DIR__ . '/getjoomla_curl.log';
+
+        curl_setopt($this->connection, CURLOPT_VERBOSE, true);
+        $fdebug = fopen($debugPath, 'w');
+        curl_setopt($this->connection, CURLOPT_STDERR, $fdebug);
+        
         // Set File Handle
         if (is_resource($handle)) {
             curl_setopt($this->connection, CURLOPT_TIMEOUT, 100);
