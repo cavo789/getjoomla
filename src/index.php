@@ -1,8 +1,10 @@
 <?php
-
 /**
  * GetJoomla
- * Script to download a Joomla package
+ *
+ * Script to download a Joomla package from the Github repository maintained by
+ * the French AFUJ association (https://www.joomla.fr)
+ *
  * php version 7.2.
  *
  * @package   GetJoomla
@@ -15,12 +17,18 @@
  *
  * Also worked on this script:
  *   * Yann Gomiero <https://github.com/YGomiero>
- *   * Robert Gastaud <https://www.robertg-conseil.fr/>
  *   * Christophe Avonture <https://github.com/cavo789>
  */
+
 // phpcs:disable PSR1.Files.SideEffects
 
 namespace BestJoomla;
+
+if (!function_exists( 'str_starts_with' ) ) {
+    function str_starts_with(string $haystack, string $needle): bool {
+        return \strncmp($haystack, $needle, \strlen($needle)) === 0;
+    }
+}
 
 /**
  * GetJoomla installer class.
@@ -40,6 +48,28 @@ class Installer
      * @var string
      */
     private $baseUrl = '';
+
+    /**
+     * Error message (if there is) returned by Github like a API rate
+     * limit count exceeded
+     *
+     * @var string
+     */
+    private $gitErrorMessage = '';
+
+    /**
+     * Latest Joomla version, the most recent one. Retrieve from Github.
+     *
+     * @var string  f.i. "Joomla! 3.9.22 Stable version francisée v1"
+     */
+    private $joomlaLatestVersion = '' ;
+
+    /**
+     * List of all Joomla versions retrieved on Github
+     *
+     * @var array
+     */
+    private $joomlaAllVersions = [];
 
     /**
      * CURL connection handle.
@@ -70,28 +100,8 @@ class Installer
         // Disable execution time limit
         set_time_limit(0);
 
-        // Disable caching
-        header('Expires: ' . gmdate('D, d M Y H:i:s \G\M\T', time() - 3600));
-
         // Get script base URL
         $this->setBaseUrl('//' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-
-        // Load cache if exists and is fresh (not older then hour)
-        $path = __DIR__ . '/getjoomla.cache';
-
-        if (file_exists($path) && (filemtime($path) > (time() - (60 * 15)))) {
-            $this->cache = json_decode((string) file_get_contents($path), true);
-        }
-    }
-
-    /**
-     * Store cache.
-     */
-    public function __destruct()
-    {
-        if (!empty($this->cache['versions'])) {
-            file_put_contents(__DIR__ . '/getjoomla.cache', json_encode($this->cache));
-        }
     }
 
     /**
@@ -102,21 +112,26 @@ class Installer
     public function getVersions(): array
     {
         if (empty($this->cache['versions'])) {
-            $buffer = $this->getURLContents(self::URL_VERSIONS);
+            try {
+                $buffer = $this->getURLContents(self::URL_VERSIONS);
 
-            $list = json_decode($buffer);
+                $list = json_decode($buffer);
 
-            $url = '';
+                $url = '';
 
-            // Search for full installation asset
-            foreach ($list as $version) {
-                foreach ($version->assets as $asset) {
-                    if (stripos($asset->name, 'Full_Package.zip')) {
-                        $url = $asset->browser_download_url;
+                // Search for full installation asset
+                foreach ($list as $version) {
+                    foreach ($version->assets as $asset) {
+                        if (stripos($asset->name, 'Full_Package.zip')) {
+                            $url = $asset->browser_download_url;
+                        }
                     }
-                }
 
-                $this->cache['versions'][$version->name] = $url;
+                    $this->cache['versions'][$version->name] = $url;
+                }
+            } catch (\Exception $exception) {
+                // Github has probably returned an error; capture it
+                $this->cache['versions'][$exception->getMessage()] = '';
             }
         }
 
@@ -131,9 +146,16 @@ class Installer
     public function getLatestVersion(): string
     {
         if ('' === $this->cache['latest']) {
-            $buffer                = $this->getURLContents(self::URL_VERSIONS . '/latest');
-            $tmp                   = json_decode($buffer);
-            $this->cache['latest'] = $tmp->name;
+            $buffer = $this->getURLContents(self::URL_VERSIONS . '/latest');
+
+            $tmp = json_decode($buffer, true);
+
+            if (isset($tmp['message'])) {
+                $this->gitErrorMessage = $tmp['message'];
+                return '';
+            }
+
+            $this->cache['latest'] = $tmp['name'];
         }
 
         return $this->cache['latest'];
@@ -168,7 +190,7 @@ class Installer
             );
         }
 
-        // The getjoomla.cache file is no more needed
+        // Cache files are no more needed
         $this->removeCache();
 
         // **************************
@@ -201,8 +223,8 @@ class Installer
             );
         }
 
-        // Redierct to installation
-        header('Location: ' . $this->getBaseUrl() . 'installation/index.php');
+        // Redirect to installation
+        header('Location: installation/index.php');
     }
 
     /**
@@ -239,7 +261,7 @@ class Installer
         // Check if PHP can get remote contect
         if (!ini_get('allow_url_fopen') or !function_exists('curl_init')) {
             throw new \RuntimeException(
-                'This class require <b>CURL</b> or <b>allow_url_fopen</b> have
+                'This script require <b>CURL</b> or <b>allow_url_fopen</b> have
                 to be enabled in PHP configuration.',
                 502
             );
@@ -248,14 +270,39 @@ class Installer
         // Check if server allow to extract zip files
         if (!class_exists('ZipArchive')) {
             throw new \RuntimeException(
-                'Class <b>ZipArchive</b> is not available in current PHP configuration.',
+                'Class <b>ZipArchive</b> is not available in your current PHP configuration.',
                 502
             );
         }
 
         if (!is_writable(__DIR__)) {
             throw new \RuntimeException(
-                'The folder ' . __DIR__ . ' is not writable.',
+                "The folder " . __DIR__ . " is not writable, please check folder's permissions.",
+                502
+            );
+        }
+
+        // Try to retrieve the latest Joomla version from Github.
+        $this->joomlaLatestVersion = $this->getLatestVersion();
+
+        if ('' === $this->joomlaLatestVersion) {
+            throw new \RuntimeException(
+                sprintf(
+                    'The URL %s has returned an empty string. Strange...',
+                    self::URL_VERSIONS
+                )
+            );
+        }
+
+        // The error message is initialized by the getLatestVersion() function 
+        // when there was something wrong with Github
+        if ('' !== $this->gitErrorMessage) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Github has refused the connection and returned '.
+                    'the following error message:<br/><strong>%s</strong>',
+                    $this->gitErrorMessage
+                ),
                 502
             );
         }
@@ -271,12 +318,8 @@ class Installer
     {
         $options = '';
 
-        // For instance "Joomla! 3.9.22 Stable version francisée v1"
-        $latest   = $this->getLatestVersion();
-        $versions = $this->getVersions();
-
-        foreach ($versions as $version => $url) {
-            if ($version !== $latest) {
+        foreach ($this->joomlaAllVersions as $version => $url) {
+            if ($version !== $this->joomlaLatestVersion) {
                 $options .= sprintf(
                     '<option value="%s">%s</option>',
                     $url,
@@ -295,19 +338,17 @@ class Installer
      */
     public function getLatestsVersionOptions(): string
     {
-        // For instance "Joomla! 3.9.22 Stable version francisée v1"
-        $latest   = $this->getLatestVersion();
-        $versions = $this->getVersions();
+        $url = $this->joomlaAllVersions[$this->joomlaLatestVersion];
 
         return sprintf(
             '<option value="%s" style="font-weight:700">%s</option>',
-            $versions[$latest],
-            $latest
+            $url,
+            $this->joomlaLatestVersion
         );
     }
 
     /**
-     * Remove the cached file.
+     * Remove the cached files.
      *
      * @throws \RuntimeException
      *
@@ -315,18 +356,74 @@ class Installer
      */
     private function removeCache(): void
     {
-        $path = __DIR__ . '/getjoomla.cache';
+        $arr = ['latest', 'versions'];
 
-        if (file_exists($path)) {
-            if (false === unlink($path)) {
-                throw new \RuntimeException(
-                    sprintf(
-                        'The file %s was impossible to remove',
-                        $path
-                    )
-                );
+        foreach ($arr as $file) {
+            $path = __DIR__ . '/getjoomla.'.$file.'.cache';
+
+            if (file_exists($path)) {
+                if (false === unlink($path)) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'The file %s was impossible to remove',
+                            $path
+                        )
+                    );
+                }
             }
         }
+
+    }
+
+    /**
+     * Load the data from the cache file only if the cache exists and is
+     * not obsolete
+     *
+     * @param string $name File name ("latest" or "versions")
+     *
+     * @return string Content of the file or empty string if obsolete
+     */
+    private function loadCacheFile(string $name): string
+    {
+        $path = __DIR__ . '/getjoomla.'.$name.'.cache';
+
+        if (file_exists($path) && (filemtime($path) > (time() - (60 * 15)))) {
+            return ((string) file_get_contents($path));
+        }
+
+        return '';
+    }
+
+    /**
+     * Initialize variables
+     *
+     * @return void
+     */
+    public function initialize(): void
+    {
+        //region Get the latest version cache
+        $cache = $this->loadCacheFile('latest');
+
+        if ('' === $cache) {
+            // Try to retrieve the latest Joomla version from Github.
+            $this->joomlaLatestVersion = $this->getLatestVersion();
+            file_put_contents(__DIR__ . '/getjoomla.latest.cache', json_encode($this->joomlaLatestVersion));
+        } else {
+            $this->joomlaLatestVersion = json_decode($cache);
+        }
+        //endregion
+
+        //region Get the all versions cache
+        $cache = $this->loadCacheFile('versions');
+
+        if ('' === $cache) {
+            // Try to retrieve the latest Joomla version from Github.
+            $this->joomlaAllVersions = $this->getVersions();
+            file_put_contents(__DIR__ . '/getjoomla.versions.cache', json_encode($this->joomlaAllVersions));
+        } else {
+            $this->joomlaAllVersions = json_decode($cache, true);
+        }
+        //endregion
     }
 
     /**
@@ -343,10 +440,7 @@ class Installer
         $content = '';
 
         if (\function_exists('curl_init')) {
-            // Prepare CURL connection
             $this->prepareConnection($url, null);
-
-            // Get the response
             $content = curl_exec($this->connection);
         } else {
             $options = [
@@ -372,28 +466,11 @@ class Installer
                     '%s has failed to open %s',
                     function_exists('curl_init') ? 'curl' : 'file_get_contents',
                     $url
-                )
+                ),
+                502
             );
         }
 
-        if ('' === \trim($content)) {
-            $curlError = '';
-
-            $debugPath = __DIR__ . '/getjoomla_curl.log';
-            if (file_exists($debugPath)) {
-                $curlError = file_get_contents($debugPath);
-            }
-
-            throw new \RuntimeException(
-                sprintf(
-                    'The URL %s has returned an empty string. The function '.
-                    'used to retrieve that content was %s. %s',
-                    $url,
-                    function_exists('curl_init') ? 'curl' : 'file_get_contents',
-                    ('' !== $curlError) ? 'Returned error was: '. $curlError : ''
-                )
-            );
-        }
         return $content;
     }
 
@@ -407,30 +484,20 @@ class Installer
      */
     private function prepareConnection(string $url, $handle): void
     {
-        // Connection needs to be created
         if (!is_resource($this->connection)) {
-            // Initialise connection
             $this->connection = curl_init();
 
-            // Configure CURL
             curl_setopt($this->connection, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($this->connection, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($this->connection, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
         }
 
-        // Set URL
+        // Set the URL to visit
         if ('' !== $url) {
             curl_setopt($this->connection, CURLOPT_URL, $url);
         }
 
-        // output debugging info in a txt file
-        $debugPath = __DIR__ . '/getjoomla_curl.log';
-
-        curl_setopt($this->connection, CURLOPT_VERBOSE, true);
-        $fdebug = fopen($debugPath, 'w');
-        curl_setopt($this->connection, CURLOPT_STDERR, $fdebug);
-        
-        // Set File Handle
+        // Set file handle
         if (is_resource($handle)) {
             curl_setopt($this->connection, CURLOPT_TIMEOUT, 100);
             curl_setopt($this->connection, CURLOPT_FILE, $handle);
@@ -518,31 +585,16 @@ class Installer
         }
     }
 }
-
-//region Entry Point
-try {
-    $installer = new Installer();
-
-    $installer->checkRequirements();
-
-    if (isset($_GET['install'])) {
-        // Let's go, start the installation
-        $installer->prepare($_GET['install']);
-    }
-} catch (\Exception $exception) {
-    die('An error has occured: ' . $exception->getMessage());
-}
-
-//endregion
-
 ?>
 <!DOCTYPE html>
 <html lang="fr">
     <head>
         <meta charset="utf-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <base href="<?php echo $installer->getBaseUrl(); ?>" />
         <meta name="description" content="">
         <meta name="author" content="">
         <title>GetJoomla</title>
@@ -560,6 +612,12 @@ try {
         <![endif]-->
 
         <style>
+            .error {
+                background-color: #fce4e4;
+                border: 1px solid #fcc2c3;
+                padding: 20px 30px;
+            }
+
             .container {
                 padding-top: 30px;
                 padding-bottom: 30px;
@@ -905,9 +963,29 @@ try {
 
     <body>
         <div class="container">
+
             <div class="jumbotron text-center">
-                <h1>getJoomla <small>v1.1.0 FR</small></h1>
+                <h1>getJoomla <small>v1.1.1 FR</small></h1>
                 <p class="lead">Un script incroyable pour télécharger et préparer l'installation de Joomla!.</p>
+                <p><small><a href="https://github.com/cavo789/getjoomla">https://github.com/cavo789/getjoomla</a></small></p>
+
+                <?php
+                    try {
+                        $installer = new Installer();
+
+                        $installer->checkRequirements();
+
+                        $installer->initialize();
+
+                        $path = __DIR__ . '/joomla.zip';
+                        if (file_exists($path) || isset($_GET['install'])) {
+                            // Let's go, start the installation
+                            $installer->prepare($_GET['install'] ?? '');
+                        }
+                    } catch (\Exception $exception) {
+                        die('<div class="error">An error has occured: ' . $exception->getMessage().'</div>');
+                    }
+                ?>
                 <form action="<?php echo basename(__FILE__); ?>" method="get">
                     <div class="input-group">
                         <select class="form-control" name="install">

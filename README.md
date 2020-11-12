@@ -16,7 +16,7 @@ This newer version contains:
 * When the `joomla.zip` file already exists in the root folder, no zip will be downloaded again (principle of caching)
 * ...
 
-This GetJoomla script has been written by BestProject [https://github.com/bestproject/getjoomla.php](https://github.com/bestproject/getjoomla.php) and translated in French by [Yann Gomiero](https://github.com/YGomiero). Maintained during years by [Robert Gastaud](https://www.robertg-conseil.fr/) and refactored by [Christophe Avonture](https://github.com/cavo789)
+This GetJoomla script has been written by BestProject [https://github.com/bestproject/getjoomla.php](https://github.com/bestproject/getjoomla.php) and translated in French by [Yann Gomiero](https://github.com/YGomiero) and refactored by [Christophe Avonture](https://github.com/cavo789)
 
 ### How to use
 
@@ -34,6 +34,20 @@ Depending on the speed of your internet connection, you just need to wait a few 
 
 ![Installation screen](./images/installation.png)
 
+### FAQs
+
+#### Github API rate limite exceeded
+
+Some websites are hosted on a shared web hosting (like `OVH` in France). Every sites on that server will have the same IP address. 
+
+Github will not be able to differentiate your site from the many sites on the same server; all will have the same IP address.
+
+And, bad luck, your address could be considered as too important a consumer for Github, for his free version.
+
+If you see the message below, you didn't have chance ... at that time; try again later.
+
+![Github API rate limite exceeded](./images/rate_limit_exceeded.png)
+
 ## Version francophone
 
 Fork du script getjoomla de BestProject [https://github.com/bestproject/getjoomla.php](https://github.com/bestproject/getjoomla.php).
@@ -46,7 +60,7 @@ Cette nouvelle version contient :
 * Lorsque le fichier `joomla.zip` existe déjà dans le dossier racine, aucun zip ne sera téléchargé à nouveau (principe de la mise en cache)
 * ...
 
-Ce script GetJoomla a été écrit par BestProject [https://github.com/bestproject/getjoomla.php](https://github.com/bestproject/getjoomla.php) et traduit en français par [Yann Gomiero](https://github.com/YGomiero). Maintenu pendant des années par [Robert Gastaud](https://www.robertg-conseil.fr/) et remanié par [Christophe Avonture](https://github.com/cavo789)
+Ce script GetJoomla a été écrit par BestProject [https://github.com/bestproject/getjoomla.php](https://github.com/bestproject/getjoomla.php) et traduit en français par [Yann Gomiero](https://github.com/YGomiero) et remanié par [Christophe Avonture](https://github.com/cavo789)
 
 ### Comment l'utiliser
 
@@ -63,3 +77,17 @@ Une fois que vous avez sélectionné une version, le script téléchargera le pa
 Selon la vitesse de votre connexion Internet, il vous suffit d'attendre quelques secondes avant de voir l'écran d'installation bien connu de Joomla :
 
 ![Écran d'installation](./images/installation.png)
+
+### FAQs
+
+#### Dépassement de la limite du taux API de Github
+
+Certains sites web sont hébergés sur un hébergement web mutualisé (comme `OVH` en France). Tous les sites de ce serveur auront la même adresse IP.
+
+Github ne sera pas en mesure de différencier votre site des nombreux sites du même serveur ; tous auront la même adresse IP.
+
+Et, pas de chance, votre adresse pourrait être considérée comme un consommateur trop important pour Github (dans sa version gratuite).
+
+Si vous voyez le message ci-dessous, vous n'avez pas eu de chance ... à ce moment-là ; réessayez plus tard.
+
+![Github API rate limit exceeded](./images/rate_limit_exceeded.png)
