@@ -1,6 +1,6 @@
 <?php
 /**
- * GetJoomla
+ * GetJoomla.
  *
  * Script to download a Joomla package from the Github repository maintained by
  * the French AFUJ association (https://www.joomla.fr)
@@ -24,12 +24,6 @@
 
 namespace BestJoomla;
 
-if (!function_exists( 'str_starts_with' ) ) {
-    function str_starts_with(string $haystack, string $needle): bool {
-        return \strncmp($haystack, $needle, \strlen($needle)) === 0;
-    }
-}
-
 /**
  * GetJoomla installer class.
  */
@@ -51,7 +45,7 @@ class Installer
 
     /**
      * Error message (if there is) returned by Github like a API rate
-     * limit count exceeded
+     * limit count exceeded.
      *
      * @var string
      */
@@ -60,14 +54,14 @@ class Installer
     /**
      * Latest Joomla version, the most recent one. Retrieve from Github.
      *
-     * @var string  f.i. "Joomla! 3.9.22 Stable version francisée v1"
+     * @var string f.i. "Joomla! 3.9.22 Stable version francisée v1"
      */
-    private $joomlaLatestVersion = '' ;
+    private $joomlaLatestVersion = '';
 
     /**
-     * List of all Joomla versions retrieved on Github
+     * List of all Joomla versions retrieved on Github.
      *
-     * @var array
+     * @var array<mixed>
      */
     private $joomlaAllVersions = [];
 
@@ -152,6 +146,7 @@ class Installer
 
             if (isset($tmp['message'])) {
                 $this->gitErrorMessage = $tmp['message'];
+
                 return '';
             }
 
@@ -165,19 +160,19 @@ class Installer
      * Download package, unpack it, install and redirect to
      * Joomla! installation page.
      *
-     * @param string $url_zip URL to Joomla! installation package.
+     * @param string $urlZip URL to Joomla! installation package.
      *
      * @throws \Exception
      *
      * @return void
      */
-    public function prepare(string $url_zip): void
+    public function prepare(string $urlZip): void
     {
         $path = __DIR__ . '/joomla.zip';
 
         // Download zip only if not yet there
         if (!file_exists($path)) {
-            $this->downloadFile($url_zip, $path);
+            $this->downloadFile($urlZip, $path);
         }
 
         if (!file_exists($path)) {
@@ -277,7 +272,7 @@ class Installer
 
         if (!is_writable(__DIR__)) {
             throw new \RuntimeException(
-                "The folder " . __DIR__ . " is not writable, please check folder's permissions.",
+                'The folder ' . __DIR__ . " is not writable, please check folder's permissions.",
                 502
             );
         }
@@ -294,12 +289,12 @@ class Installer
             );
         }
 
-        // The error message is initialized by the getLatestVersion() function 
+        // The error message is initialized by the getLatestVersion() function
         // when there was something wrong with Github
         if ('' !== $this->gitErrorMessage) {
             throw new \RuntimeException(
                 sprintf(
-                    'Github has refused the connection and returned '.
+                    'Github has refused the connection and returned ' .
                     'the following error message:<br/><strong>%s</strong>',
                     $this->gitErrorMessage
                 ),
@@ -348,54 +343,7 @@ class Installer
     }
 
     /**
-     * Remove the cached files.
-     *
-     * @throws \RuntimeException
-     *
-     * @return void
-     */
-    private function removeCache(): void
-    {
-        $arr = ['latest', 'versions'];
-
-        foreach ($arr as $file) {
-            $path = __DIR__ . '/getjoomla.'.$file.'.cache';
-
-            if (file_exists($path)) {
-                if (false === unlink($path)) {
-                    throw new \RuntimeException(
-                        sprintf(
-                            'The file %s was impossible to remove',
-                            $path
-                        )
-                    );
-                }
-            }
-        }
-
-    }
-
-    /**
-     * Load the data from the cache file only if the cache exists and is
-     * not obsolete
-     *
-     * @param string $name File name ("latest" or "versions")
-     *
-     * @return string Content of the file or empty string if obsolete
-     */
-    private function loadCacheFile(string $name): string
-    {
-        $path = __DIR__ . '/getjoomla.'.$name.'.cache';
-
-        if (file_exists($path) && (filemtime($path) > (time() - (60 * 15)))) {
-            return ((string) file_get_contents($path));
-        }
-
-        return '';
-    }
-
-    /**
-     * Initialize variables
+     * Initialize variables.
      *
      * @return void
      */
@@ -411,6 +359,7 @@ class Installer
         } else {
             $this->joomlaLatestVersion = json_decode($cache);
         }
+
         //endregion
 
         //region Get the all versions cache
@@ -423,7 +372,54 @@ class Installer
         } else {
             $this->joomlaAllVersions = json_decode($cache, true);
         }
+
         //endregion
+    }
+
+    /**
+     * Remove the cached files.
+     *
+     * @throws \RuntimeException
+     *
+     * @return void
+     */
+    private function removeCache(): void
+    {
+        $arr = ['latest', 'versions'];
+
+        foreach ($arr as $file) {
+            $path = __DIR__ . '/getjoomla.' . $file . '.cache';
+
+            if (file_exists($path)) {
+                if (false === unlink($path)) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'The file %s was impossible to remove',
+                            $path
+                        )
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Load the data from the cache file only if the cache exists and is
+     * not obsolete.
+     *
+     * @param string $name File name ("latest" or "versions")
+     *
+     * @return string Content of the file or empty string if obsolete
+     */
+    private function loadCacheFile(string $name): string
+    {
+        $path = __DIR__ . '/getjoomla.' . $name . '.cache';
+
+        if (file_exists($path) && (filemtime($path) > (time() - (60 * 15)))) {
+            return (string) file_get_contents($path);
+        }
+
+        return '';
     }
 
     /**
@@ -967,7 +963,9 @@ class Installer
             <div class="jumbotron text-center">
                 <h1>getJoomla <small>v1.1.1 FR</small></h1>
                 <p class="lead">Un script incroyable pour télécharger et préparer l'installation de Joomla!.</p>
-                <p><small><a href="https://github.com/cavo789/getjoomla">https://github.com/cavo789/getjoomla</a></small></p>
+                <p><small>
+                    <a href="https://github.com/cavo789/getjoomla">https://github.com/cavo789/getjoomla</a>
+                </small></p>
 
                 <?php
                     try {
@@ -983,7 +981,7 @@ class Installer
                             $installer->prepare($_GET['install'] ?? '');
                         }
                     } catch (\Exception $exception) {
-                        die('<div class="error">An error has occured: ' . $exception->getMessage().'</div>');
+                        die('<div class="error">An error has occured: ' . $exception->getMessage() . '</div>');
                     }
                 ?>
                 <form action="<?php echo basename(__FILE__); ?>" method="get">
