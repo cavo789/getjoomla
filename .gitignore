@@ -4,3 +4,4 @@
 composer.lock
 src/getjoomla.cache
 src/joomla.zip
+vendor/
