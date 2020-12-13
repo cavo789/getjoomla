@@ -218,8 +218,11 @@ class Installer
             );
         }
 
-        // Redirect to installation
-        header('Location: installation/index.php');
+        // Redirect to installation; don't use php header() function
+        // to avoid the warning "Cannot modify header information - headers already sent by ..."
+        // https://forum.joomla.fr/forum/développeurs/développements/2021933-problème-avec-getjoomla-fr?p=2023045#post2023045
+        // header('Location: installation/index.php');
+        die('<script>location.replace("installation/index.php"); </script>');
     }
 
     /**
@@ -961,7 +964,7 @@ class Installer
         <div class="container">
 
             <div class="jumbotron text-center">
-                <h1>getJoomla <small>v1.1.1 FR</small></h1>
+                <h1>getJoomla <small>v1.1.2 FR</small></h1>
                 <p class="lead">Un script incroyable pour télécharger et préparer l'installation de Joomla!.</p>
                 <p><small>
                     <a href="https://github.com/cavo789/getjoomla">https://github.com/cavo789/getjoomla</a>
