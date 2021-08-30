@@ -5,12 +5,12 @@
  * Script to download a Joomla package from the Github repository maintained by
  * the French AFUJ association (https://www.joomla.fr)
  *
- * php version 7.2.
+ * php version 7.4.
  *
  * @package   GetJoomla
  *
  * @author    Best Project <kontakt@bestproject.pl>
- * @copyright 2016-2020 (c)
+ * @copyright 2016-2021 (c)
  * @license   MIT <https://github.com/cavo789/getjoomla/blob/main/LICENSE>
  *
  * @see https://github.com/cavo789/getjoomla/
@@ -22,7 +22,7 @@
 
 // phpcs:disable PSR1.Files.SideEffects
 
-namespace BestJoomla;
+namespace GetJoomla;
 
 /**
  * GetJoomla installer class.
@@ -34,7 +34,13 @@ class Installer
      *
      * @var string
      */
-    const URL_VERSIONS = 'https://api.github.com/repos/AFUJ/joomla-cms-fr/releases';
+    const URL_VERSIONS = [
+        'https://api.github.com/repos/AFUJ/joomla-cms-fr/releases',
+        'https://api.github.com/repos/Opware2000/Joomla-4-French-Full-release/releases',
+    ];
+
+    // The default key from URL_VERSIONS
+    private $defaultURLKey=0;
 
     /**
      * Base URL of the current site.
@@ -107,7 +113,7 @@ class Installer
     {
         if (empty($this->cache['versions'])) {
             try {
-                $buffer = $this->getURLContents(self::URL_VERSIONS);
+                $buffer = $this->getURLContents(self::URL_VERSIONS[$this->defaultURLKey]);
 
                 $list = json_decode($buffer);
 
@@ -140,7 +146,7 @@ class Installer
     public function getLatestVersion(): string
     {
         if ('' === $this->cache['latest']) {
-            $buffer = $this->getURLContents(self::URL_VERSIONS . '/latest');
+            $buffer = $this->getURLContents(self::URL_VERSIONS[$this->defaultURLKey] . '/latest');
 
             $tmp = json_decode($buffer, true);
 
@@ -150,7 +156,7 @@ class Installer
                 return '';
             }
 
-            $this->cache['latest'] = $tmp['name'];
+            $this->cache['latest'] = $tmp['name'] ?? '';
         }
 
         return $this->cache['latest'];
@@ -248,6 +254,19 @@ class Installer
     }
 
     /**
+     * Which URLs from URL_VERSIONS should be used?
+     *
+     * @param integer $key Define the entry to use
+     *
+     * @return void
+     */
+    public function setDefaultUrl(int $key): void
+    {
+        $this->defaultURLKey = $key;
+
+    }
+
+    /**
      * Check Class requirements.
      *
      * @throws \RuntimeException
@@ -279,31 +298,26 @@ class Installer
                 502
             );
         }
+    }
 
-        // Try to retrieve the latest Joomla version from Github.
-        $this->joomlaLatestVersion = $this->getLatestVersion();
+    /**
+     * Generate a list of URLs from where to download Joomla
+     *
+     * @return string
+     */
+    public function getURLs(): string
+    {
+        $options = '';
 
-        if ('' === $this->joomlaLatestVersion) {
-            throw new \RuntimeException(
-                sprintf(
-                    'The URL %s has returned an empty string. Strange...',
-                    self::URL_VERSIONS
-                )
+        foreach (self::URL_VERSIONS as $key => $url) {
+            $options .= sprintf(
+                '<option value="%s">%s</option>',
+                $key,
+                $url
             );
         }
 
-        // The error message is initialized by the getLatestVersion() function
-        // when there was something wrong with Github
-        if ('' !== $this->gitErrorMessage) {
-            throw new \RuntimeException(
-                sprintf(
-                    'Github has refused the connection and returned ' .
-                    'the following error message:<br/><strong>%s</strong>',
-                    $this->gitErrorMessage
-                ),
-                502
-            );
-        }
+        return $options;
     }
 
     /**
@@ -315,6 +329,19 @@ class Installer
     public function getVersionsOptions(): string
     {
         $options = '';
+
+        //region Get the all versions cache
+        $cache = $this->loadCacheFile('versions');
+
+        if ('' === $cache) {
+            // Try to retrieve the latest Joomla version from Github.
+            $this->joomlaAllVersions = $this->getVersions();
+            file_put_contents(__DIR__ . '/getjoomla.'.$this->defaultURLKey.'.versions.cache', json_encode($this->joomlaAllVersions));
+            // file_put_contents(sys_get_temp_dir() . '/getjoomla.versions.cache', json_encode($this->joomlaAllVersions));
+        } else {
+            $this->joomlaAllVersions = json_decode($cache, true);
+        }
+        //endregion
 
         foreach ($this->joomlaAllVersions as $version => $url) {
             if ($version !== $this->joomlaLatestVersion) {
@@ -336,6 +363,18 @@ class Installer
      */
     public function getLatestsVersionOptions(): string
     {
+        //region Get the latest version cache
+        $cache = $this->loadCacheFile('latest');
+
+        if ('' === $cache) {
+            // Try to retrieve the latest Joomla version from Github.
+            $this->joomlaLatestVersion = $this->getLatestVersion();
+            file_put_contents(__DIR__ . '/getjoomla.'.$this->defaultURLKey.'.latest.cache', json_encode($this->joomlaLatestVersion));
+        } else {
+            $this->joomlaLatestVersion = json_decode($cache);
+        }
+        //endregion
+
         $url = $this->joomlaAllVersions[$this->joomlaLatestVersion];
 
         return sprintf(
@@ -352,31 +391,30 @@ class Installer
      */
     public function initialize(): void
     {
-        //region Get the latest version cache
-        $cache = $this->loadCacheFile('latest');
+        // Try to retrieve the latest Joomla version from Github.
+        $this->joomlaLatestVersion = $this->getLatestVersion();
 
-        if ('' === $cache) {
-            // Try to retrieve the latest Joomla version from Github.
-            $this->joomlaLatestVersion = $this->getLatestVersion();
-            file_put_contents(__DIR__ . '/getjoomla.latest.cache', json_encode($this->joomlaLatestVersion));
-        } else {
-            $this->joomlaLatestVersion = json_decode($cache);
+        if ('' === $this->joomlaLatestVersion) {
+            throw new \RuntimeException(
+                sprintf(
+                    'The URL %s has returned an empty string. Strange...',
+                    self::URL_VERSIONS[$this->defaultURLKey]
+                )
+            );
         }
 
-        //endregion
-
-        //region Get the all versions cache
-        $cache = $this->loadCacheFile('versions');
-
-        if ('' === $cache) {
-            // Try to retrieve the latest Joomla version from Github.
-            $this->joomlaAllVersions = $this->getVersions();
-            file_put_contents(__DIR__ . '/getjoomla.versions.cache', json_encode($this->joomlaAllVersions));
-        } else {
-            $this->joomlaAllVersions = json_decode($cache, true);
+        // The error message is initialized by the getLatestVersion() function
+        // when there was something wrong with Github
+        if ('' !== $this->gitErrorMessage) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Github has refused the connection and returned ' .
+                    'the following error message:<br/><strong>%s</strong>',
+                    $this->gitErrorMessage
+                ),
+                502
+            );
         }
-
-        //endregion
     }
 
     /**
@@ -584,6 +622,35 @@ class Installer
         }
     }
 }
+
+echo "<h1>INSIDE ".__FILE__.", line ".__LINE__."</h1>";
+die();
+
+// Entry point
+$action=filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING);
+
+if ('' !== $action) {
+
+    $key=filter_input(INPUT_GET, 'key', FILTER_SANITIZE_NUMBER_INT) ?? 0;
+
+    try {
+        $installer = new Installer();
+        $installer->setDefaultUrl($key);
+        switch ($action) {
+            case 'getVersionsOptions':
+                die($installer->getVersionsOptions());
+
+            case 'getLatestsVersionsOptions':
+                die($installer->getLatestsVersionOptions());
+
+            default:
+                break;
+        }
+    } catch (\Exception $exception) {
+        die('<div class="error">An error has occured: ' . $exception->getMessage() . '</div>');
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -956,6 +1023,32 @@ class Installer
                 $('form').submit(function(){
                     $('.loader').addClass('enabled');
                 });
+
+                $('#urls').change(function() {
+
+                    $('#install').prop('disabled', true);
+
+                    // url="index.php?action=getLatestsVersionOptions&key=" + this.value;
+                    // $.getJSON(url, function(data) {
+                    //     $("#urls").empty();
+                    //     $.each(data, function () {
+                    //         $prevGroup = $('<optgroup />').prop('label', 'Dernière version').appendTo('#urls');
+                    //         $("<option />").val(this.Value).text(this.Text).appendTo($prevGroup);
+                    //     });
+                    // });
+
+                    url="index.php?action=getVersionsOptions&key=" + this.value;
+                    $.getJSON(url, function(data) {
+                        $("#urls").empty();
+                        $.each(data, function () {
+                            $prevGroup = $('<optgroup />').prop('label', 'Dernière version').appendTo('#urls');
+                            $("<option />").val(this.Value).text(this.Text).appendTo($prevGroup);
+                        });
+                    })
+
+                    $('#install').prop('disabled', false);
+
+                });
             });
         </script>
     </head>
@@ -964,7 +1057,7 @@ class Installer
         <div class="container">
 
             <div class="jumbotron text-center">
-                <h1>getJoomla <small>v1.1.2 FR</small></h1>
+                <h1>getJoomla <small>v1.1.3 FR</small></h1>
                 <p class="lead">Un script incroyable pour télécharger et préparer l'installation de Joomla!.</p>
                 <p><small>
                     <a href="https://github.com/cavo789/getjoomla">https://github.com/cavo789/getjoomla</a>
@@ -989,7 +1082,11 @@ class Installer
                 ?>
                 <form action="<?php echo basename(__FILE__); ?>" method="get">
                     <div class="input-group">
-                        <select class="form-control" name="install">
+                        <select class="form-control" id="urls">
+                            <?php echo $installer->getURLs(); ?>
+                        </select>
+
+                        <select class="form-control" name="install" id="install">
                             <optgroup label="Dernière version">
                                 <?php echo $installer->getLatestsVersionOptions();?>
                             </optgroup>
