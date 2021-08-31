@@ -9,4 +9,4 @@ COPY ./.docker/webserver/demo.apache.conf /usr/local/apache2/conf/demo.apache.co
 RUN echo "Include /usr/local/apache2/conf/demo.apache.conf" \
     >> /usr/local/apache2/conf/httpd.conf
 
-WORKDIR /var/www/html
+WORKDIR /var/www/src

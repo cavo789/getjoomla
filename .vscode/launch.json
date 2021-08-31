@@ -5,11 +5,11 @@
             "name": "Listen for XDebug",
             "type": "php",
             "request": "launch",
-            "port": 9000,
+            "port": 9001,
             "ignore": ["**/bin/**/*","**/vendor/**/*"],
             "internalConsoleOptions": "openOnSessionStart",
             "pathMappings": { 
-                "/var/www/html": "${workspaceRoot}/src"
+                "/var/www/src": "${workspaceRoot}/src"
             }
         }
     ]
