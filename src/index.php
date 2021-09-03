@@ -263,7 +263,6 @@ class Installer
     public function setDefaultUrl(int $key): void
     {
         $this->defaultURLKey = $key;
-
     }
 
     /**
@@ -337,7 +336,7 @@ class Installer
             // Try to retrieve the latest Joomla version from Github.
             $this->joomlaAllVersions = $this->getVersions();
             file_put_contents(__DIR__ . '/getjoomla.'.$this->defaultURLKey.'.versions.cache', json_encode($this->joomlaAllVersions));
-            // file_put_contents(sys_get_temp_dir() . '/getjoomla.versions.cache', json_encode($this->joomlaAllVersions));
+        // file_put_contents(sys_get_temp_dir() . '/getjoomla.versions.cache', json_encode($this->joomlaAllVersions));
         } else {
             $this->joomlaAllVersions = json_decode($cache, true);
         }
@@ -623,6 +622,9 @@ class Installer
     }
 }
 
+xdebug_info();
+
+echo 10/0;
 echo "<h1>INSIDE ".__FILE__.", line ".__LINE__."</h1>";
 die();
 
@@ -630,7 +632,6 @@ die();
 $action=filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING);
 
 if ('' !== $action) {
-
     $key=filter_input(INPUT_GET, 'key', FILTER_SANITIZE_NUMBER_INT) ?? 0;
 
     try {

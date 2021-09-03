@@ -1,8 +1,8 @@
 # Desired target PHP version, See https://hub.docker.com/_/php for more
 ARG PHP_VERSION=7.4
 
-# Version number of xDebug to install.
-ARG XDEBUG_VERSION=2.9.8
+# Should we install xDebug?
+ARG XDEBUG_INSTALL=false
 
 ARG APPLICATION_NAME=""
 
@@ -11,12 +11,13 @@ ARG OS_USERID=1000
 
 FROM php:${PHP_VERSION}-fpm
 
-# Install xDebug
-ARG XDEBUG_VERSION
+ARG XDEBUG_INSTALL
 
-RUN pecl install -f xdebug-${XDEBUG_VERSION}; \
-    rm -r /tmp/pear/*; \
-    docker-php-ext-enable xdebug
+RUN echo "Install xDebug? $XDEBUG_INSTALL"; \
+    if [ "$XDEBUG_INSTALL" = "true" ]; then \
+    pecl install xdebug; \
+    docker-php-ext-enable xdebug; \
+    fi
 
 # Install php modules
 RUN apt-get update; \
