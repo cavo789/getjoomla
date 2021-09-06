@@ -42,7 +42,6 @@ services:
         - OS_USERNAME=${OS_USERNAME}
         - OS_USERID=${OS_USERID}
         - PHP_VERSION=${PHP_VERSION}
-        - XDEBUG_INSTALL=${XDEBUG_INSTALL}
     depends_on:
       - db
     environment:

@@ -622,10 +622,16 @@ class Installer
     }
 }
 
-xdebug_info();
+// Add `xdebug_info();` to the list of PHP instructions to output the xDebug's configurations
+// of the server
 
-echo 10/0;
-echo "<h1>INSIDE ".__FILE__.", line ".__LINE__."</h1>";
+$name = $_REQUEST['name'] ?? 'John Doe';
+
+echo "<h1>Hello " . $name . "!</h1>";
+
+echo "<p>Now, edit the index.php file in VSCode, add a breakpoint " .
+    "and press F5 to start the debugging. Go back in the browser tab " .
+    "and press CTRL-F5. If everything goes fine, VSCode will be in debug mode.</p>";
 die();
 
 // Entry point

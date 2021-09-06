@@ -5,13 +5,18 @@
             "name": "Listen for XDebug",
             "type": "php",
             "request": "launch",
+            "port_comment": "Port 9003 is the default one with xDebug v3",
             "port": 9003,
+            "hostname_comment": "Important! 0.0.0.0 is the address to bind when listening for xDebug. 0.0.0.0 means `host.docker.internal` which should be the value to use in xdebug.ini for the xdebug.client_host key",
+            "hostname": "0.0.0.0",
             "ignore": ["**/bin/**/*","**/vendor/**/*"],
             "internalConsoleOptions": "openOnSessionStart",
             "pathMappings": { 
                 "/var/www/src": "${workspaceRoot}/src"
             },
-            "stopOnEntry": true
+            "stopOnEntry_comment": "When true, the debugger will halt on the first PHP instruction that is being fired. Just like if a breakpoint was manually put on that line in the code",
+            "stopOnEntry": false,
+            "log": false
         }
     ]
 }
