@@ -22,7 +22,7 @@ This GetJoomla script has been written by BestProject [https://github.com/bestpr
 
 ### How to use
 
-Just download a copy of the `src/index.php` file and save that file in the folder where you wish install Joomla. This done, start a browser tab and navigate to your folder; add `index.php` to the URL is needed.
+Just download a copy of the `src/getjoomla.php` file and save that file in the folder where you wish install Joomla. This done, start a browser tab and navigate to your folder; add `getjoomla.php` to the URL f.i. `https://yoursite/getjoomla.php`.
 
 You'll get this screen:
 
@@ -66,7 +66,7 @@ Ce script GetJoomla a été écrit par BestProject [https://github.com/bestproje
 
 ### Comment l'utiliser
 
-Il suffit de télécharger une copie du fichier `src/index.php` et de sauvegarder ce fichier dans le dossier où vous souhaitez installer Joomla. Ceci fait, démarrez un onglet du navigateur et naviguez dans votre dossier ; ajoutez `index.php` à l'URL est nécessaire.
+Il suffit de télécharger une copie du fichier `src/getjoomla.php` et de sauvegarder ce fichier dans le dossier où vous souhaitez installer Joomla. Ceci fait, démarrez un onglet du navigateur et naviguez dans votre dossier ; ajoutez `getjoomla.php` à l'URL p.ex. `https://votresite/getjoomla.php`.
 
 Vous obtiendrez cet écran :
 
